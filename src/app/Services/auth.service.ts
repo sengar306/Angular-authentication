@@ -4,6 +4,7 @@ import { authResponse } from '../Model/authResponse';
 import { BehaviorSubject, catchError, Subject, tap, throwError } from 'rxjs';
 import { user } from '../Model/user';
 import { Router } from '@angular/router';
+import { Token } from '@angular/compiler';
 
 @Injectable({
   providedIn: 'root'
@@ -72,6 +73,16 @@ router:Router=inject(Router)
   
   
   }
+  autoLogin(){
+   const user1= JSON.parse(localStorage.getItem('user'))
+   if(!user){
+    return 
+   }
+   const loggesUser= new user(user1.email,user1.localid,user1.idToken ,user1.expiresIn)
+   if(user1.idToken){
+    this.user.next(loggesUser)
+   }
+  }
   private handleCreateUser(res){
     // console.log(res.expiresIn )
     const expiresinTs=new Date().getTime()+ +res.expiresIn *1000
@@ -79,6 +90,7 @@ router:Router=inject(Router)
     const  expiresin=new Date(expiresinTs)
    const user1= new user(res.email,res.localid,res.idToken,expiresin )
     this.user.next(user1)
+    localStorage.setItem('user',JSON.stringify(user1))
   }
   logout(){
     this.user.next(null)
