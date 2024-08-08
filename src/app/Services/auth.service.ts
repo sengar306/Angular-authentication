@@ -13,6 +13,7 @@ export class AuthService {
 htttp:HttpClient=inject(HttpClient)
 user=new BehaviorSubject<user>(null)
 router:Router=inject(Router)
+private tokenExpiretimer:any
   constructor() { }
   signUp(email,password){
      const data ={
@@ -22,7 +23,6 @@ router:Router=inject(Router)
      }
     return this.htttp.post<authResponse>('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyDKkJ-KyNDGSQ_q1SujVLVNBEZp1QoQQ-M',data).pipe(catchError(this.handleError),tap((res)=>{
       tap((res)=>{
-        console.log(res)
         this.handleCreateUser(res)
       })
     }))
@@ -35,7 +35,6 @@ router:Router=inject(Router)
       returnSecureToken:true
      }
     return this.htttp.post<authResponse>("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDKkJ-KyNDGSQ_q1SujVLVNBEZp1QoQQ-M",data).pipe(catchError(this.handleError),tap((res)=>{
-      // console.log(res)
       this.handleCreateUser(res)
     }))
 
@@ -81,6 +80,8 @@ router:Router=inject(Router)
    const loggesUser= new user(user1.email,user1.localid,user1.idToken ,user1.expiresIn)
    if(user1.idToken){
     this.user.next(loggesUser)
+    const timerValue=user1.expiresIn.getTime()-new Date().getTime()
+    this.autoLogout(timerValue)
    }
   }
   private handleCreateUser(res){
@@ -90,11 +91,24 @@ router:Router=inject(Router)
     const  expiresin=new Date(expiresinTs)
    const user1= new user(res.email,res.localid,res.idToken,expiresin )
     this.user.next(user1)
+    this.autoLogout(res.expiresIn*1000)
     localStorage.setItem('user',JSON.stringify(user1))
   }
   logout(){
     this.user.next(null)
     this.router.navigate(['/login'])
+    localStorage.removeItem('user')
+    if(this.tokenExpiretimer)
+    {
+      clearTimeout(this.tokenExpiretimer)
 
+    }
+    this.tokenExpiretimer=null
+
+  }
+  autoLogout(expiresTime:number){
+      this.tokenExpiretimer =setTimeout(() => {
+        this.logout()
+       }, expiresTime);
   }
 }
